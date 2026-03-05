@@ -46,16 +46,8 @@ the original [steipete/bird](https://github.com/steipete/bird) repo was removed 
 
 ## install
 
-steipete's homebrew tap is the cleanest install. try it first.
-
 ```bash
-brew install steipete/tap/bird
-```
-
-if the tap is gone or the formula is broken, install directly from this mirror:
-
-```bash
-# direct download from this mirror — universal arm64/x86_64 binary
+# direct download — universal arm64/x86_64 binary from this mirror
 curl -L https://github.com/zaydiscold/bird/releases/download/v0.8.0/bird -o bird
 chmod +x bird
 sudo mv bird /usr/local/bin/bird
@@ -68,6 +60,9 @@ wget -O bird https://github.com/zaydiscold/bird/releases/download/v0.8.0/bird
 chmod +x bird
 sudo mv bird /usr/local/bin/bird
 ```
+
+> **note on homebrew:** steipete's tap (`brew install steipete/tap/bird`) was the original install method. i'm not sure if that tap is still maintained — it may be down. use the curl install above to be safe.<br>
+> <sub>steipete's original tap: `brew install steipete/tap/bird`</sub>
 
 verify:
 
