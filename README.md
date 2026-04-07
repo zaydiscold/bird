@@ -1,3 +1,5 @@
+<!-- thanks supersuper for being on my ass :) -->
+
 <p align="center">
   <img src="./assets/banner.svg" alt="banner" />
 </p>

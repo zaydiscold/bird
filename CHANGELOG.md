@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1 — 2026-04-07 (this fork)
+
+### Fixed
+- **error 226** on tweet/reply: proper `x-client-transaction-id` derivation from Twitter homepage JS (not random bytes). Fixes "automated request" errors when posting. — thanks @erogol.
+- Complete source code now available in this repo (src/, tests/, scripts/, patches/) — thanks @supersuper for being on my ass about binary-only repos :)
+
 ## 0.8.0 — 2026-01-19
 
 ### Added
