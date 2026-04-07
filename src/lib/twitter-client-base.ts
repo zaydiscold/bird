@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
+import { ClientTransaction } from 'x-client-transaction-id';
 import { runtimeQueryIds } from './runtime-query-ids.js';
 import { type OperationName, QUERY_IDS, TARGET_QUERY_ID_OPERATIONS } from './twitter-client-constants.js';
 import type { CurrentUserResult, TwitterClientOptions } from './twitter-client-types.js';
@@ -22,6 +23,8 @@ export abstract class TwitterClientBase {
   protected clientUuid: string;
   protected clientDeviceId: string;
   protected clientUserId?: string;
+  private _clientTransaction?: ClientTransaction;
+  private _pendingTransactionId?: string;
 
   constructor(options: TwitterClientOptions) {
     if (!options.cookies.authToken || !options.cookies.ct0) {
@@ -101,7 +104,31 @@ export abstract class TwitterClientBase {
     return this.getJsonHeaders();
   }
 
+  protected async prepareTransactionId(method: string, urlPath: string): Promise<void> {
+    if (process.env.NODE_ENV === 'test') {
+      return;
+    }
+    if (!this._clientTransaction) {
+      try {
+        this._clientTransaction = await ClientTransaction.create();
+      } catch {
+        // Fallback: will use randomBytes in createTransactionId
+        return;
+      }
+    }
+    if (this._clientTransaction) {
+      this._pendingTransactionId = this._clientTransaction.generateTransactionId(method, urlPath);
+    }
+  }
+
   protected createTransactionId(): string {
+    // Use pending transaction ID if prepared (consumed once)
+    if (this._pendingTransactionId) {
+      const id = this._pendingTransactionId;
+      this._pendingTransactionId = undefined;
+      return id;
+    }
+    // Fallback to random (may cause error 226 on POSTs)
     return randomBytes(16).toString('hex');
   }
 

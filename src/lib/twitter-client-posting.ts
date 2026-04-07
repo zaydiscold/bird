@@ -64,6 +64,10 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
       features: Record<string, boolean>,
     ): Promise<TweetResult> {
       await this.ensureClientUserId();
+
+      // Prepare transaction ID for POST (fixes error 226)
+      await this.prepareTransactionId('POST', '/i/api/graphql/CreateTweet');
+
       let queryId = await this.getQueryId('CreateTweet');
       let urlWithOperation = `${TWITTER_API_BASE}/${queryId}/CreateTweet`;
 
