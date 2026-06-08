@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 — 2026-06-04 (this fork)
+
+### Added
+- **Long posts (note tweets)**: `tweet` and `reply` automatically route text over 280 weighted chars through the `CreateNoteTweet` GraphQL mutation, so X Premium accounts can post long tweets directly from the CLI. URLs count as 23 chars (t.co wrapping), matching X's weighted-length rules. Short tweets still use `CreateTweet` — no behavior change for non-Premium accounts.
+- `CreateNoteTweet` added to the query-id refresh script (`pnpm graphql:update`) and fallback table.
+- `docs/graphql-operations.md`: full enumeration of GraphQL operations discovered in X's live client bundle, for future endpoint work.
+
+### Changed
+- Refreshed all cached GraphQL query IDs from the live X client bundle (SearchTimeline, Following, Followers, Likes, ExploreSidebar, ExplorePage, GenericTimelineById, TrendHistory, and more had rotated).
+
 ## 0.8.1 — 2026-04-07 (this fork)
 
 ### Fixed

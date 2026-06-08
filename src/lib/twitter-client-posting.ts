@@ -1,11 +1,31 @@
 import type { AbstractConstructor, Mixin, TwitterClientBase } from './twitter-client-base.js';
 import { TWITTER_API_BASE, TWITTER_GRAPHQL_POST_URL, TWITTER_STATUS_UPDATE_URL } from './twitter-client-constants.js';
-import { buildTweetCreateFeatures } from './twitter-client-features.js';
+import {
+  buildNoteTweetCreateFeatures,
+  buildNoteTweetFieldToggles,
+  buildTweetCreateFeatures,
+} from './twitter-client-features.js';
 import type { CreateTweetResponse, TweetResult } from './twitter-client-types.js';
 
 export interface TwitterClientPostingMethods {
   tweet(text: string, mediaIds?: string[]): Promise<TweetResult>;
   reply(text: string, replyToTweetId: string, mediaIds?: string[]): Promise<TweetResult>;
+}
+
+const STANDARD_TWEET_MAX_WEIGHTED_LENGTH = 280;
+const URL_WEIGHTED_LENGTH = 23;
+const URL_REGEX = /https?:\/\/\S+/g;
+
+/**
+ * Approximate X's weighted tweet length: URLs count as 23 chars (t.co wrapping),
+ * everything else as code points. Used to decide CreateTweet vs CreateNoteTweet —
+ * note tweets (long posts) require X Premium, so only route there when the text
+ * genuinely exceeds the standard limit.
+ */
+export function weightedTweetLength(text: string): number {
+  const withoutUrls = text.replace(URL_REGEX, '');
+  const urlCount = (text.match(URL_REGEX) ?? []).length;
+  return [...withoutUrls].length + urlCount * URL_WEIGHTED_LENGTH;
 }
 
 export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>>(
@@ -18,7 +38,8 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
     }
 
     /**
-     * Post a new tweet
+     * Post a new tweet. Text over the standard 280 weighted-char limit is sent
+     * as a long post (note tweet) via CreateNoteTweet — requires X Premium.
      */
     async tweet(text: string, mediaIds?: string[]): Promise<TweetResult> {
       const variables = {
@@ -31,13 +52,13 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
         semantic_annotation_ids: [],
       };
 
-      const features = buildTweetCreateFeatures();
-
-      return this.createTweet(variables, features);
+      const operation = this.pickCreateOperation(text);
+      return this.createTweet(variables, this.featuresFor(operation), operation, this.fieldTogglesFor(operation));
     }
 
     /**
-     * Reply to an existing tweet
+     * Reply to an existing tweet. Long replies route through CreateNoteTweet
+     * (requires X Premium), same as tweet().
      */
     async reply(text: string, replyToTweetId: string, mediaIds?: string[]): Promise<TweetResult> {
       const variables = {
@@ -54,24 +75,46 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
         semantic_annotation_ids: [],
       };
 
-      const features = buildTweetCreateFeatures();
+      const operation = this.pickCreateOperation(text);
+      return this.createTweet(variables, this.featuresFor(operation), operation, this.fieldTogglesFor(operation));
+    }
 
-      return this.createTweet(variables, features);
+    private pickCreateOperation(text: string): 'CreateTweet' | 'CreateNoteTweet' {
+      return weightedTweetLength(text) > STANDARD_TWEET_MAX_WEIGHTED_LENGTH ? 'CreateNoteTweet' : 'CreateTweet';
+    }
+
+    private featuresFor(operation: 'CreateTweet' | 'CreateNoteTweet'): Record<string, boolean> {
+      return operation === 'CreateNoteTweet' ? buildNoteTweetCreateFeatures() : buildTweetCreateFeatures();
+    }
+
+    private fieldTogglesFor(operation: 'CreateTweet' | 'CreateNoteTweet'): Record<string, boolean> | undefined {
+      // CreateNoteTweet declares fieldToggles in the live client; CreateTweet does not.
+      return operation === 'CreateNoteTweet' ? buildNoteTweetFieldToggles() : undefined;
+    }
+
+    private extractTweetId(data: CreateTweetResponse): string | undefined {
+      return (
+        data.data?.create_tweet?.tweet_results?.result?.rest_id ??
+        data.data?.notetweet_create?.tweet_results?.result?.rest_id
+      );
     }
 
     private async createTweet(
       variables: Record<string, unknown>,
       features: Record<string, boolean>,
+      operation: 'CreateTweet' | 'CreateNoteTweet' = 'CreateTweet',
+      fieldToggles?: Record<string, boolean>,
     ): Promise<TweetResult> {
       await this.ensureClientUserId();
 
       // Prepare transaction ID for POST (fixes error 226)
-      await this.prepareTransactionId('POST', '/i/api/graphql/CreateTweet');
+      await this.prepareTransactionId('POST', `/i/api/graphql/${operation}`);
 
-      let queryId = await this.getQueryId('CreateTweet');
-      let urlWithOperation = `${TWITTER_API_BASE}/${queryId}/CreateTweet`;
+      let queryId = await this.getQueryId(operation);
+      let urlWithOperation = `${TWITTER_API_BASE}/${queryId}/${operation}`;
 
-      const buildBody = () => JSON.stringify({ variables, features, queryId });
+      const buildBody = () =>
+        JSON.stringify(fieldToggles ? { variables, features, fieldToggles, queryId } : { variables, features, queryId });
       let body = buildBody();
 
       try {
@@ -86,8 +129,8 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
         // If the operation URL 404s, retry the generic endpoint.
         if (response.status === 404) {
           await this.refreshQueryIds();
-          queryId = await this.getQueryId('CreateTweet');
-          urlWithOperation = `${TWITTER_API_BASE}/${queryId}/CreateTweet`;
+          queryId = await this.getQueryId(operation);
+          urlWithOperation = `${TWITTER_API_BASE}/${queryId}/${operation}`;
           body = buildBody();
 
           response = await this.fetchWithTimeout(urlWithOperation, {
@@ -111,14 +154,15 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
             const data = (await retry.json()) as CreateTweetResponse;
 
             if (data.errors && data.errors.length > 0) {
-              const fallback = await this.tryStatusUpdateFallback(data.errors, variables);
+              const fallback =
+                operation === 'CreateTweet' ? await this.tryStatusUpdateFallback(data.errors, variables) : null;
               if (fallback) {
                 return fallback;
               }
               return { success: false, error: this.formatErrors(data.errors) };
             }
 
-            const tweetId = data.data?.create_tweet?.tweet_results?.result?.rest_id;
+            const tweetId = this.extractTweetId(data);
             if (tweetId) {
               return { success: true, tweetId };
             }
@@ -138,7 +182,8 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
         const data = (await response.json()) as CreateTweetResponse;
 
         if (data.errors && data.errors.length > 0) {
-          const fallback = await this.tryStatusUpdateFallback(data.errors, variables);
+          const fallback =
+            operation === 'CreateTweet' ? await this.tryStatusUpdateFallback(data.errors, variables) : null;
           if (fallback) {
             return fallback;
           }
@@ -148,7 +193,7 @@ export function withPosting<TBase extends AbstractConstructor<TwitterClientBase>
           };
         }
 
-        const tweetId = data.data?.create_tweet?.tweet_results?.result?.rest_id;
+        const tweetId = this.extractTweetId(data);
         if (tweetId) {
           return {
             success: true,

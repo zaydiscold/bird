@@ -399,6 +399,16 @@ export interface CreateTweetResponse {
         };
       };
     };
+    notetweet_create?: {
+      tweet_results?: {
+        result?: {
+          rest_id?: string;
+          legacy?: {
+            full_text?: string;
+          };
+        };
+      };
+    };
   };
   errors?: Array<{ message: string; code?: number }>;
 }

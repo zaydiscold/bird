@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { ClientTransaction } from 'x-client-transaction-id';
+import { ClientTransaction, handleXMigration } from 'x-client-transaction-id';
 import { runtimeQueryIds } from './runtime-query-ids.js';
 import { type OperationName, QUERY_IDS, TARGET_QUERY_ID_OPERATIONS } from './twitter-client-constants.js';
 import type { CurrentUserResult, TwitterClientOptions } from './twitter-client-types.js';
@@ -110,14 +110,21 @@ export abstract class TwitterClientBase {
     }
     if (!this._clientTransaction) {
       try {
-        this._clientTransaction = await ClientTransaction.create();
+        // x-client-transaction-id >= 0.2.3 requires the X home page Document
+        // for key extraction; handleXMigration() fetches it (following the
+        // x.com migration redirects).
+        this._clientTransaction = await ClientTransaction.create(await handleXMigration());
       } catch {
         // Fallback: will use randomBytes in createTransactionId
         return;
       }
     }
     if (this._clientTransaction) {
-      this._pendingTransactionId = this._clientTransaction.generateTransactionId(method, urlPath);
+      try {
+        this._pendingTransactionId = await this._clientTransaction.generateTransactionId(method, urlPath);
+      } catch {
+        // Fallback: will use randomBytes in createTransactionId
+      }
     }
   }
 

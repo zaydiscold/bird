@@ -138,7 +138,18 @@ bird unfollow @handle
 # attach media — up to 4 images or 1 video
 bird tweet "caption" --media /path/to/image.jpg --alt "alt text"
 bird tweet "caption" --media /path/to/video.mp4
+
+# long posts (X Premium): text over 280 weighted chars is auto-routed
+# through CreateNoteTweet — no flag needed, just write a long tweet
+bird tweet "$(cat my-long-post.txt)"
 ```
+
+**long posts / note tweets (new in 0.9.0):** if your text exceeds the standard
+280 weighted-char limit (URLs count as 23), `tweet`/`reply` automatically use
+X's `CreateNoteTweet` mutation instead of `CreateTweet`. Requires X Premium on
+the account. Short tweets are unaffected — they still use the cheap path. The
+note-tweet request carries the distinct feature-flag set + `fieldToggles` that
+X's web client sends, so it passes server-side validation.
 
 ### output
 

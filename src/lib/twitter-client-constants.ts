@@ -15,6 +15,7 @@ export const SETTINGS_NAME_REGEX = /"name":"([^"\\]*(?:\\.[^"\\]*)*)"/;
 // the file is missing or incomplete.
 export const FALLBACK_QUERY_IDS = {
   CreateTweet: 'TAJw1rBsjAtdNgTdlo2oeg',
+  CreateNoteTweet: 'F-3KdTAbHcMmA9b1nN3rRA',
   CreateRetweet: 'ojPdsZsimiJrUGLR1sjUtA',
   DeleteRetweet: 'iQtK4dl5hBmXewYZuEOKVw',
   CreateFriendship: '8h9JVdV8dlSyqyRDJEPCsA',

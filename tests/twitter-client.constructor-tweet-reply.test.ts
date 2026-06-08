@@ -108,6 +108,75 @@ describe('TwitterClient tweet', () => {
     ]);
   });
 
+  it('routes long posts (>280 weighted chars) through CreateNoteTweet', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          notetweet_create: {
+            tweet_results: {
+              result: { rest_id: '9999999999' },
+            },
+          },
+        },
+      }),
+    });
+
+    const longText = 'a'.repeat(300);
+    const client = new TwitterClient({ cookies: validCookies });
+    const result = await client.tweet(longText);
+
+    expect(result.success).toBe(true);
+    expect(result.tweetId).toBe('9999999999');
+
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(String(url)).toContain('CreateNoteTweet');
+
+    const body = JSON.parse(options.body);
+    // Note tweets must carry the note-specific feature flags + fieldToggles.
+    expect(body.features.rweb_cashtags_composer_attachment_enabled).toBe(true);
+    expect(body.features.content_disclosure_indicator_enabled).toBe(true);
+    expect(body.fieldToggles).toBeDefined();
+    expect(body.fieldToggles.withArticleRichContentState).toBe(true);
+  });
+
+  it('keeps short tweets on CreateTweet with no fieldToggles', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { create_tweet: { tweet_results: { result: { rest_id: '5' } } } },
+      }),
+    });
+
+    const client = new TwitterClient({ cookies: validCookies });
+    await client.tweet('short and sweet');
+
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(String(url)).toContain('CreateTweet');
+    expect(String(url)).not.toContain('CreateNoteTweet');
+    const body = JSON.parse(options.body);
+    expect(body.fieldToggles).toBeUndefined();
+  });
+
+  it('counts URLs as 23 weighted chars when deciding note-tweet routing', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: { create_tweet: { tweet_results: { result: { rest_id: '7' } } } },
+      }),
+    });
+
+    // 250 literal chars + one URL (weighted 23) = 273 weighted → stays on CreateTweet,
+    // even though raw string length is well over 280.
+    const text = `${'b'.repeat(250)} https://example.com/${'x'.repeat(80)}`;
+    const client = new TwitterClient({ cookies: validCookies });
+    await client.tweet(text);
+
+    const [url] = mockFetch.mock.calls[0];
+    expect(String(url)).toContain('CreateTweet');
+    expect(String(url)).not.toContain('CreateNoteTweet');
+  });
+
   it('retries CreateTweet via /i/api/graphql when operation URL 404s', async () => {
     mockFetch
       .mockResolvedValueOnce({

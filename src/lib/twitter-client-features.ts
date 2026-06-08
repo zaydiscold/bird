@@ -154,6 +154,73 @@ export function buildTweetCreateFeatures(): Record<string, boolean> {
   });
 }
 
+/**
+ * Feature switches X's web client sends with the CreateNoteTweet mutation
+ * (long posts). This is a DISTINCT set from buildTweetCreateFeatures() — the
+ * note-tweet operation declares flags (rweb_cashtags_*, content_disclosure_*,
+ * rweb_conversational_replies_downvote_enabled) that the standard create path
+ * does not. X rejects writes whose features map is missing any declared flag,
+ * so reusing the wrong set causes generic write failures. Extracted from the
+ * live client bundle's CreateNoteTweet operation registry entry.
+ */
+export function buildNoteTweetCreateFeatures(): Record<string, boolean> {
+  return applyFeatureOverrides('noteTweetCreate', {
+    premium_content_api_read_enabled: false,
+    communities_web_enable_tweet_community_results_fetch: true,
+    c9s_tweet_anatomy_moderator_badge_enabled: true,
+    responsive_web_grok_analyze_button_fetch_trends_enabled: false,
+    responsive_web_grok_analyze_post_followups_enabled: false,
+    rweb_cashtags_composer_attachment_enabled: true,
+    responsive_web_jetfuel_frame: true,
+    responsive_web_grok_share_attachment_enabled: true,
+    responsive_web_grok_annotations_enabled: false,
+    responsive_web_edit_tweet_api_enabled: true,
+    rweb_conversational_replies_downvote_enabled: true,
+    graphql_is_translatable_rweb_tweet_is_translatable_enabled: true,
+    view_counts_everywhere_api_enabled: true,
+    longform_notetweets_consumption_enabled: true,
+    responsive_web_twitter_article_tweet_consumption_enabled: true,
+    content_disclosure_indicator_enabled: true,
+    content_disclosure_ai_generated_indicator_enabled: true,
+    responsive_web_grok_show_grok_translated_post: false,
+    responsive_web_grok_analysis_button_from_backend: true,
+    post_ctas_fetch_enabled: true,
+    longform_notetweets_rich_text_read_enabled: true,
+    longform_notetweets_inline_media_enabled: true,
+    profile_label_improvements_pcf_label_in_post_enabled: true,
+    responsive_web_profile_redirect_enabled: false,
+    rweb_tipjar_consumption_enabled: true,
+    verified_phone_label_enabled: false,
+    articles_preview_enabled: true,
+    rweb_cashtags_enabled: true,
+    responsive_web_grok_community_note_auto_translation_is_enabled: false,
+    responsive_web_graphql_skip_user_profile_image_extensions_enabled: false,
+    freedom_of_speech_not_reach_fetch_enabled: true,
+    standardized_nudges_misinfo: true,
+    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled: true,
+    responsive_web_grok_image_annotation_enabled: true,
+    responsive_web_grok_imagine_annotation_enabled: true,
+    responsive_web_graphql_timeline_navigation_enabled: true,
+  });
+}
+
+/**
+ * fieldToggles X sends with CreateNoteTweet. Omitting these from the note-tweet
+ * payload is another rejection cause. Extracted from the live bundle.
+ */
+export function buildNoteTweetFieldToggles(): Record<string, boolean> {
+  return {
+    withArticleRichContentState: true,
+    withArticlePlainText: false,
+    withArticleSummaryText: false,
+    withArticleVoiceOver: false,
+    withGrokAnalyze: false,
+    withDisallowedReplyControls: false,
+    withPayments: false,
+    withAuxiliaryUserLabels: false,
+  };
+}
+
 export function buildTimelineFeatures(): Record<string, boolean> {
   return applyFeatureOverrides('timeline', {
     ...buildSearchFeatures(),
