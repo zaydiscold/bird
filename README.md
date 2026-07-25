@@ -49,7 +49,7 @@ the original [steipete/bird](https://github.com/steipete/bird) repo was removed 
 ## install
 
 ```bash
-# direct download — universal arm64/x86_64 binary from this mirror
+# direct download: universal arm64/x86_64 binary from this mirror
 curl -L https://github.com/zaydiscold/bird/releases/download/v0.8.0/bird -o bird
 chmod +x bird
 sudo mv bird /usr/local/bin/bird
@@ -63,7 +63,7 @@ chmod +x bird
 sudo mv bird /usr/local/bin/bird
 ```
 
-> **note on homebrew:** steipete's tap (`brew install steipete/tap/bird`) was the original install method. i'm not sure if that tap is still maintained — it may be down. use the curl install above to be safe.<br>
+> **note on homebrew:** steipete's tap (`brew install steipete/tap/bird`) was the original install method. i'm not sure if that tap is still maintained; it may be down. use the curl install above to be safe.<br>
 > <sub>steipete's original tap: `brew install steipete/tap/bird`</sub>
 
 verify:
@@ -135,19 +135,19 @@ bird reply <url-or-id> "reply text"
 bird follow @handle
 bird unfollow @handle
 
-# attach media — up to 4 images or 1 video
+# attach media: up to 4 images or 1 video
 bird tweet "caption" --media /path/to/image.jpg --alt "alt text"
 bird tweet "caption" --media /path/to/video.mp4
 
 # long posts (X Premium): text over 280 weighted chars is auto-routed
-# through CreateNoteTweet — no flag needed, just write a long tweet
+# through CreateNoteTweet, no flag needed. just write a long tweet
 bird tweet "$(cat my-long-post.txt)"
 ```
 
 **long posts / note tweets (new in 0.9.0):** if your text exceeds the standard
 280 weighted-char limit (URLs count as 23), `tweet`/`reply` automatically use
 X's `CreateNoteTweet` mutation instead of `CreateTweet`. Requires X Premium on
-the account. Short tweets are unaffected — they still use the cheap path. The
+the account. Short tweets are unaffected; they still use the cheap path. The
 note-tweet request carries the distinct feature-flag set + `fieldToggles` that
 X's web client sends, so it passes server-side validation.
 
@@ -175,7 +175,7 @@ bird search "query" --plain     # no color, pipeable
 
 for claude code, cursor, codex, and other ai agents: **[zaydiscold/bird-skill](https://github.com/zaydiscold/bird-skill)**
 
-i built the skill myself. paste any x.com link into a claude code session and it reads the tweet directly — no browser, no webfetch. it also handles timelines, search, posting, all of it. homegrown, built to work on top of peter's binary.
+i built the skill myself. paste any x.com link into a claude code session and it reads the tweet directly. no browser, no webfetch. it also handles timelines, search, posting, all of it. homegrown, built to work on top of peter's binary.
 
 ```bash
 npx skills add zaydiscold/bird-skill@bird -g -y
@@ -201,8 +201,6 @@ npx skills add zaydiscold/bird-skill@bird -g -y
   </a>
 </p>
 
-<p align="center">mit. <a href="./LICENSE">license</a></p>
-
 <br>
 <br>
 
@@ -213,22 +211,12 @@ npx skills add zaydiscold/bird-skill@bird -g -y
 <br>
 <br>
 
-<p align="left"><strong>zayd / cold</strong></p>
+<p align="center"><strong>zayd / cold</strong></p>
 
 <p align="center">
   <a href="https://zayd.wtf">zayd.wtf</a> · <a href="https://x.com/coldcooks">twitter</a> · <a href="https://github.com/zaydiscold">github</a>
   <br>
   <em>icarus only fell because he flew</em>
-</p>
-
-<p align="right">
-  <strong>to do</strong><br>
-  <sub>
-  ☑ mirror binary + release<br>
-  ☑ homebrew formula<br>
-  ☑ bird-skill for ai agents<br>
-  ☐ auto-update check on install
-  </sub>
 </p>
 
 <br>
